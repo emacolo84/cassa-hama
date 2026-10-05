@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Solo le due email di Quelli Sgranati possono leggere e scrivere.
+    function ammesso() {
+      return request.auth != null
+        && request.auth.token.email in ['EMAIL_EMA', 'EMAIL_COMPAGNA'];
+    }
+    match /{collezione}/{documento} {
+      allow read, write: if ammesso()
+        && collezione in ['config', 'mercati', 'prodotti', 'set', 'vendite', 'spese'];
+    }
+  }
+}
