@@ -138,8 +138,8 @@ h2{font-family:var(--display);font-weight:800;font-size:19px;margin:22px 0 10px;
 
 /* Schede in basso */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:7;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-.tabs-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);height:var(--tabs-h)}
-.tab{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:13px;font-weight:700;color:var(--muted)}
+.tabs-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);height:var(--tabs-h)}
+.tab{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;min-width:0;font-weight:700;color:var(--muted)}
 .tab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .tab[aria-selected="true"]{color:var(--accent)}
 .tab{position:relative}
@@ -151,6 +151,14 @@ h2{font-family:var(--display);font-weight:800;font-size:19px;margin:22px 0 10px;
 .refill-row{border-bottom:1px solid var(--line);padding:10px 0}
 .refill-row:last-child{border-bottom:0}
 .refill-row .li{border:0;padding:0}
+.memo-row{border:0;border-bottom:1px solid var(--line);background:none;text-align:left;width:100%}
+.memo-row:last-child{border-bottom:0}
+.memo-row.passato{opacity:.55}
+.stato{flex:none;font-size:12px;font-weight:800;padding:4px 9px;border-radius:99px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.stato.ora{background:var(--warn);color:var(--accent-ink)}
+.stato.ok{background:color-mix(in srgb,var(--ok,#2e7d32) 18%,var(--surface));color:var(--ink)}
+.seg.due{grid-template-columns:repeat(2,minmax(0,1fr))}
+.seg.due button{--c:var(--accent)}
 .refill-open{flex:1;min-width:0;display:flex;align-items:center;gap:10px;border:0;background:none;padding:0;text-align:left;color:inherit}
 
 /* Incassi */
@@ -270,6 +278,7 @@ h2{font-family:var(--display);font-weight:800;font-size:19px;margin:22px 0 10px;
   <button class="tab" role="tab" data-tab="refill" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.5L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.6 4.5L20 16"/><path d="M20 21v-5h-5"/></svg>Refill</button>
   <button class="tab" role="tab" data-tab="catalogo" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Catalogo</button>
   <button class="tab" role="tab" data-tab="spese" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Spese</button>
+  <button class="tab" role="tab" data-tab="memo" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Memo</button>
 </div></nav>
 
 <script src="config.js"></script>
@@ -448,7 +457,7 @@ function renderCliente(){
 /* ---------- Viste ---------- */
 let cercaCat='',filtroTipo='tutte',confirmMerc=null,confirmRefill=null;
 let tab='vendi',filtro='tutte',cerca='',selMercato=null,confirmDel=null;
-try{const t=localStorage.getItem(LS+'-tab');if(['vendi','incassi','refill','catalogo','spese'].includes(t))tab=t}catch(e){}
+try{const t=localStorage.getItem(LS+'-tab');if(['vendi','incassi','refill','catalogo','spese','memo'].includes(t))tab=t}catch(e){}
 const view=document.getElementById('view');
 
 function bead(taglia,s){return '<i class="bead c-'+esc(taglia||'medi')+'"'+(s?' style="--s:'+s+'px"':'')+'></i>'}
@@ -619,10 +628,10 @@ function viewCatalogo(){
 
 function render(){
   document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===tab)));
-  {const n=esaurite().length,t=document.querySelector('.tab[data-tab="refill"]');let bd=t.querySelector('.badge');if(n){if(!bd){bd=document.createElement('span');bd.className='badge num';t.appendChild(bd)}bd.textContent=n}else if(bd)bd.remove()}
+  [['refill',esaurite().length],['memo',memoList().filter(m=>memoStato(m)==='ora').length]].forEach(([k,n])=>{const t=document.querySelector('.tab[data-tab="'+k+'"]');let bd=t.querySelector('.badge');if(n){if(!bd){bd=document.createElement('span');bd.className='badge num';t.appendChild(bd)}bd.textContent=n}else if(bd)bd.remove()});
   const active=document.activeElement&&document.activeElement.id;
   const caret=(active==='cerca'||active==='cercaCat')?document.activeElement.selectionStart:null;
-  view.innerHTML=tab==='vendi'?viewVendi():tab==='incassi'?viewIncassi():tab==='spese'?viewSpese():tab==='refill'?viewRefill():viewCatalogo();
+  view.innerHTML=tab==='vendi'?viewVendi():tab==='incassi'?viewIncassi():tab==='spese'?viewSpese():tab==='refill'?viewRefill():tab==='memo'?viewMemo():viewCatalogo();
   if(active==='cerca'||active==='cercaCat'){const i=document.getElementById(active);if(i){i.focus();try{i.setSelectionRange(caret,caret)}catch(e){}}}
   renderCliente();updateSync();
 }
@@ -651,6 +660,8 @@ view.addEventListener('click',e=>{
   if(t.dataset.periodo){periodo=t.dataset.periodo;render();return}
   if(t.dataset.editspesa){openSpesa(S.spese[t.dataset.editspesa]);return}
   if(t.id==='nuovaSpesa'){openSpesa(null);return}
+  if(t.id==='nuovoMemo'){openMemo(null);return}
+  if(t.dataset.editmemo){openMemo(S.config[t.dataset.editmemo]);return}
   if(t.dataset.filtro){filtro=t.dataset.filtro;render();return}
   if(t.dataset.goto){go(t.dataset.goto);return}
   if(t.dataset.askdel){confirmDel=t.dataset.askdel;render();return}
@@ -792,6 +803,65 @@ function openSpesa(orig){
       el.querySelector('#xSalva').onclick=()=>{keep();if(!st.importo){imp.focus();return}
         put('spese',{id:st.id,descrizione:st.descrizione.trim(),importo:st.importo,categoria:st.categoria,data:st.data,mercatoId:st.mercatoId});closeSheet();render();toast(isNew?'Spesa aggiunta':'Spesa salvata')};
       if(isNew&&st.importo==null)setTimeout(()=>imp.focus(),50);
+    });
+  };
+  draw();
+}
+/* ---------- Memo: promemoria di fiere e mercatini ----------
+   Stanno nella collezione config (id "memo-…", tipo:'memo'), così le regole di Firestore restano quelle. */
+const memoList=()=>live('config').filter(x=>x.tipo==='memo');
+const dataLunga=iso=>{if(!iso)return'';const [y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'long',year:'numeric'})};
+const isoDi=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+// Giorno dell'avviso: due mesi prima (se quel giorno non esiste, l'ultimo del mese: 30 aprile → 28/29 febbraio)
+function memoAvviso(m){if(!m.data)return'';const [y,mo,d]=m.data.split('-').map(Number);const ult=new Date(y,mo-2,0).getDate();return isoDi(new Date(y,mo-3,Math.min(d,ult)))}
+function memoStato(m){const oggi=todayISO();if(!m.data)return'presto';if(m.data<oggi)return'passato';if(m.fatto)return'ok';return memoAvviso(m)<=oggi?'ora':'presto'}
+const giorniA=iso=>{const [y,m,d]=iso.split('-').map(Number);const t=new Date();return Math.round((new Date(y,m-1,d)-new Date(t.getFullYear(),t.getMonth(),t.getDate()))/864e5)};
+function viewMemo(){
+  const ms=memoList().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+  const prossimi=ms.filter(m=>memoStato(m)!=='passato'),passati=ms.filter(m=>memoStato(m)==='passato').reverse();
+  let h='<h2>Memo</h2><p class="sub">Le prossime fiere e i mercatini. Due mesi prima ve lo ricordo qui, con il numero rosso sulla scheda Memo, così fate in tempo con le iscrizioni.</p>';
+  h+='<div style="margin-bottom:12px"><button class="btn primary block" id="nuovoMemo">+ Nuova fiera o mercatino</button></div>';
+  const ora=prossimi.filter(m=>memoStato(m)==='ora');
+  if(ora.length)h+='<div class="banner" style="margin-bottom:12px"><span><b>È ora di iscriversi</b> a '+ora.map(m=>esc(m.nome)).join(', ')+'. Quando avete fatto, apritelo e segnate "Iscrizione fatta".</span></div>';
+  const riga=m=>{const st=memoStato(m),av=memoAvviso(m),g=m.data?giorniA(m.data):null;
+    const pill=st==='ora'?'<span class="stato ora">Iscrivetevi</span>':st==='ok'?'<span class="stato ok">Iscritti ✓</span>':st==='passato'?'':'<span class="stato num">'+(g===0?'Oggi':g===1?'Domani':'tra '+g+' giorni')+'</span>';
+    return '<button class="li memo-row'+(st==='passato'?' passato':'')+'" data-editmemo="'+esc(m.id)+'"><div class="grow"><b>'+esc(m.nome||'Senza nome')+'</b><small>'+esc(dataLunga(m.data))+(st==='presto'&&av?' · avviso dal '+esc(dayLabel(av)):'')+'</small></div>'+pill+'</button>'};
+  if(!ms.length)return h+'<div class="card empty">Nessun memo. Aggiungete qui le fiere e i mercatini a cui volete partecipare, con la data: vi avviso due mesi prima.</div>';
+  h+=prossimi.length?'<div class="card list">'+prossimi.map(riga).join('')+'</div>':'<div class="card empty">Nessuna fiera in arrivo.</div>';
+  if(passati.length)h+='<h2>Già passati</h2><div class="card list">'+passati.map(riga).join('')+'</div>';
+  return h;
+}
+// File calendario con l'avviso: evento di un giorno nella data dell'avviso, notifica alle 9
+function memoIcs(m){
+  const av=memoAvviso(m).replace(/-/g,''),[y,mo,d]=memoAvviso(m).split('-').map(Number);const dopo=isoDi(new Date(y,mo-1,d+1)).replace(/-/g,'');
+  const tx=s=>String(s).replace(/\\/g,'\\\\').replace(/[,;]/g,c=>'\\'+c).replace(/\n/g,'\\n');
+  const now=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Quelli Sgranati//Memo//IT','CALSCALE:GREGORIAN','BEGIN:VEVENT','UID:'+m.id+'@quelli-sgranati','DTSTAMP:'+now,'DTSTART;VALUE=DATE:'+av,'DTEND;VALUE=DATE:'+dopo,
+    'SUMMARY:'+tx('Iscrizione: '+m.nome),'DESCRIPTION:'+tx(m.nome+' è '+dataLunga(m.data)+'. Ricordatevi di iscrivervi.'),'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+tx('Iscrizione: '+m.nome),'TRIGGER:PT9H','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
+}
+function openMemo(orig){
+  const isNew=!orig;let st=orig?{...orig}:{id:'memo-'+uid(),tipo:'memo',nome:'',data:'',fatto:false};let askDel=false;
+  const draw=()=>{
+    const av=st.data?memoAvviso(st):'';
+    openSheet('<h3>'+(isNew?'Nuova fiera o mercatino':'Modifica memo')+'</h3>'+
+      '<div class="field"><label for="moNome">Nome</label><input class="input" id="moNome" value="'+esc(st.nome)+'" placeholder="Es. Fiera di Novara" autocomplete="off"></div>'+
+      '<div class="field"><label for="moData">Data</label><input class="input" id="moData" type="date" value="'+esc(st.data)+'">'+(av?'<span class="hint">Avviso per l\'iscrizione: '+esc(dataLunga(av))+'</span>':'')+'</div>'+
+      '<div class="field"><span class="flabel">Iscrizione</span><div class="seg due"><button data-fatto="0" aria-pressed="'+!st.fatto+'">Da fare</button><button data-fatto="1" aria-pressed="'+!!st.fatto+'">Fatta</button></div></div>'+
+      (av&&av>todayISO()?'<div class="field"><button class="btn block" id="moCal">Aggiungi l\'avviso al calendario</button><span class="hint">Il calendario del telefono vi manda una notifica alle 9 del giorno dell\'avviso, anche con l\'app chiusa.</span></div>':'')+
+      '<div class="row-btns">'+(isNew?'':(askDel?'<button class="btn danger" id="moDelOk">Elimina davvero</button>':'<button class="btn ghost" id="moDel" style="color:var(--danger)">Elimina</button>'))+'<button class="btn" id="moChiudi">Annulla</button><button class="btn primary" id="moSalva">Salva</button></div>',
+    el=>{
+      const nm=el.querySelector('#moNome'),dt=el.querySelector('#moData');
+      const keep=()=>{st.nome=nm.value;st.data=dt.value};
+      dt.onchange=()=>{keep();draw()};
+      el.querySelectorAll('[data-fatto]').forEach(b=>b.onclick=()=>{keep();st.fatto=b.dataset.fatto==='1';draw()});
+      el.querySelector('#moChiudi').onclick=closeSheet;
+      const cal=el.querySelector('#moCal');if(cal)cal.onclick=()=>{keep();if(!st.nome.trim()){nm.focus();return}
+        const a=document.createElement('a');a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(memoIcs({...st,nome:st.nome.trim()}));a.download=(st.nome.trim().replace(/[^\w\- ]+/g,'')||'memo')+'.ics';document.body.appendChild(a);a.click();a.remove()};
+      const d1=el.querySelector('#moDel');if(d1)d1.onclick=()=>{keep();askDel=true;draw()};
+      const d2=el.querySelector('#moDelOk');if(d2)d2.onclick=()=>{put('config',{...orig,del:true});closeSheet();render();toast('Memo eliminato',()=>{put('config',{...orig,del:false});render()})};
+      el.querySelector('#moSalva').onclick=()=>{keep();if(!st.nome.trim()){nm.focus();return}if(!st.data){dt.focus();return}
+        put('config',{id:st.id,tipo:'memo',nome:st.nome.trim(),data:st.data,fatto:!!st.fatto});closeSheet();render();toast(isNew?'Memo aggiunto':'Memo salvato')};
+      if(isNew&&!st.nome)setTimeout(()=>nm.focus(),50);
     });
   };
   draw();
