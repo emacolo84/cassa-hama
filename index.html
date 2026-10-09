@@ -476,13 +476,13 @@ function viewVendi(){
   const prods=live('prodotti').sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','it'));
   const sets=live('set').sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','it'));
   if(sets.length){
-    h+='<div class="h2row"><h2>I vostri set</h2><button class="btn sm" data-newset="1">+ Crea set</button></div><div class="grid">';
+    h+='<div class="h2row"><h2>I nostri set</h2><button class="btn sm" data-newset="1">+ Crea set</button></div><div class="grid">';
     sets.forEach(st=>{const i=setInfo(st);const oggi=vs.filter(v=>v.setId===st.id).length;
       const out=i.pezzi.some(p=>{const r=rimasti(p);return r!=null&&r<=0});
       h+='<button class="tile'+(out?' is-out':'')+'" data-sellset="'+esc(st.id)+'"><div class="ph">'+mosaic(i.pezzi)+(oggi?'<span class="badge l sold">×'+oggi+'</span>':'')+(out?'<span class="badge r out">Pezzo esaurito</span>':'')+'</div><div class="meta"><span class="name">'+esc(st.nome)+'</span><span class="pr">'+bead('set',12)+i.pezzi.length+' pezzi · <b class="num">'+fmt(i.prezzo)+'</b>'+(i.somma>i.prezzo?' <span class="old num">'+fmt(i.somma)+'</span>':'')+'</span></div></button>'});
     h+='</div>';
   }
-  h+='<div class="h2row"><h2>Le vostre creazioni</h2>'+(prods.length>=2&&!sets.length?'<button class="btn sm" data-newset="1">+ Crea set</button>':'')+'</div>';
+  h+='<div class="h2row"><h2>Le nostre creazioni</h2>'+(prods.length>=2&&!sets.length?'<button class="btn sm" data-newset="1">+ Crea set</button>':'')+'</div>';
   if(!prods.length){
     h+='<div class="card empty"><span class="beadrow"><i class="bead c-mini"></i><i class="bead c-piccoli"></i><i class="bead c-medi"></i></span><div>Aggiungete le creazioni nel Catalogo, con foto e pezzi disponibili: qui le vendete con un tocco e vedete quali vanno di più.</div><button class="btn primary" data-goto="catalogo">Aggiungi la prima creazione</button></div>';
     return h;
@@ -931,19 +931,28 @@ function openSet(orig){
   let st=orig?{...orig,items:[...(orig.items||[])]}:{id:uid(),nome:'',items:[],prezzoFisso:null};
   let askDel=false;
   const prods=live('prodotti').sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','it'));
+  let q='';
+  // Elenco e totali si aggiornano sul posto, così la ricerca non perde il cursore
+  const lista=()=>{const k=q.trim().toLowerCase();const pp=prods.filter(p=>!k||(p.nome||'').toLowerCase().includes(k)||(p.tipo||'').toLowerCase().includes(k));
+    return pp.length?'<div class="picker">'+pp.map(p=>'<button class="pick" data-pick="'+esc(p.id)+'" aria-pressed="'+st.items.includes(p.id)+'"><span class="ph">'+imgOr(p,30)+'</span><span class="nm">'+esc(p.nome)+'<br><span class="old" style="text-decoration:none">'+esc(SIZE_L[p.taglia]||'')+' · '+fmt(p.prezzo)+'</span></span><span class="ck">✓</span></button>').join('')+'</div>':'<div class="empty" style="padding:12px 0">Nessuna creazione trovata.</div>'};
+  const somme=()=>{const i=setInfo(st);return '<div><span>Somma dei pezzi</span><span>'+fmt(i.somma)+'</span></div><div><span>Sconto set</span><span>− '+fmt(i.sconto)+'</span></div><div class="fin"><span>Prezzo del set</span><span>'+fmt(i.prezzo)+'</span></div>'};
   const draw=()=>{
     const i=setInfo(st);
     openSheet('<h3>'+(isNew?'Crea set':'Modifica set')+'</h3>'+
       '<div class="field"><label for="sNome">Nome del set</label><input class="input" id="sNome" value="'+esc(st.nome)+'" placeholder="Es. Sfere del drago + radar" autocomplete="off"></div>'+
-      '<div class="field"><span class="flabel">Toccate le creazioni da unire ('+st.items.length+' scelte)</span>'+
-      (prods.length?'<div class="picker">'+prods.map(p=>'<button class="pick" data-pick="'+esc(p.id)+'" aria-pressed="'+st.items.includes(p.id)+'"><span class="ph">'+imgOr(p,30)+'</span><span class="nm">'+esc(p.nome)+'<br><span class="old" style="text-decoration:none">'+esc(SIZE_L[p.taglia]||'')+' · '+fmt(p.prezzo)+'</span></span><span class="ck">✓</span></button>').join('')+'</div>':'<p class="hint">Prima aggiungete qualche creazione nel Catalogo.</p>')+'</div>'+
-      '<div class="sum num"><div><span>Somma dei pezzi</span><span>'+fmt(i.somma)+'</span></div><div><span>Sconto set</span><span>− '+fmt(i.sconto)+'</span></div><div class="fin"><span>Prezzo del set</span><span>'+fmt(i.prezzo)+'</span></div></div>'+
+      '<div class="field"><span class="flabel">Toccate le creazioni da unire (<span id="sCount">'+st.items.length+'</span> scelte)</span>'+
+      (prods.length?'<input class="input" id="sCerca" type="search" placeholder="Cerca per nome o tipologia" value="'+esc(q)+'" autocomplete="off" style="margin-bottom:10px"><div id="sList">'+lista()+'</div>':'<p class="hint">Prima aggiungete qualche creazione nel Catalogo.</p>')+'</div>'+
+      '<div class="sum num" id="sSum">'+somme()+'</div>'+
       '<div class="field"><label for="sFisso">Prezzo a mano (facoltativo)</label><div class="money"><input class="input num" id="sFisso" inputmode="decimal" placeholder="'+String(i.auto).replace('.',',')+' calcolato" value="'+(st.prezzoFisso!=null?String(st.prezzoFisso).replace('.',','):'')+'"></div></div>'+
       '<div class="row-btns">'+(isNew?'':(askDel?'<button class="btn danger" id="sDelOk">Elimina davvero</button>':'<button class="btn ghost" id="sDel" style="color:var(--danger)">Elimina</button>'))+'<button class="btn" id="sChiudi">Annulla</button><button class="btn primary" id="sSalva">Salva set</button></div>',
     el=>{
       const nome=el.querySelector('#sNome');const fx=el.querySelector('#sFisso');
       const keep=()=>{st.nome=nome.value;const raw=fx.value.trim();st.prezzoFisso=raw===''?null:parseMoney(raw)};
-      el.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{keep();const id=b.dataset.pick;st.items=st.items.includes(id)?st.items.filter(x=>x!==id):[...st.items,id];const y=el.scrollTop;draw();sheet.firstElementChild.scrollTop=y});
+      const lst=el.querySelector('#sList'),cerca=el.querySelector('#sCerca');
+      if(lst)lst.onclick=e=>{const b=e.target.closest('[data-pick]');if(!b)return;const id=b.dataset.pick;st.items=st.items.includes(id)?st.items.filter(x=>x!==id):[...st.items,id];
+        b.setAttribute('aria-pressed',String(st.items.includes(id)));el.querySelector('#sCount').textContent=st.items.length;el.querySelector('#sSum').innerHTML=somme();
+        fx.placeholder=String(setInfo(st).auto).replace('.',',')+' calcolato'};
+      if(cerca)cerca.oninput=()=>{q=cerca.value;lst.innerHTML=lista()};
       fx.addEventListener('change',()=>{keep();const y=el.scrollTop;draw();sheet.firstElementChild.scrollTop=y});
       el.querySelector('#sChiudi').onclick=closeSheet;
       const d1=el.querySelector('#sDel');if(d1)d1.onclick=()=>{keep();askDel=true;draw()};
