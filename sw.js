@@ -1,6 +1,6 @@
 // Service worker: tiene l'app disponibile anche senza rete al mercatino.
 // Cambiare VERSION a ogni pubblicazione, così i telefoni scaricano la versione nuova.
-const VERSION = 'qs-v3';
+const VERSION = 'qs-v4';
 const SHELL = [
   './', 'index.html', 'config.js', 'manifest.webmanifest',
   'vendor/firebase-app-compat.js', 'vendor/firebase-auth-compat.js', 'vendor/firebase-firestore-compat.js',
