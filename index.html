@@ -184,6 +184,13 @@ h2{font-family:var(--display);font-weight:800;font-size:19px;margin:22px 0 10px;
 .thumb img{width:100%;height:100%;object-fit:cover}
 .cat-list .thumb{width:56px;height:56px}
 .cat-list .thumb img{object-fit:contain}
+.thumb.zoomabile{cursor:zoom-in}
+.zoom{position:fixed;inset:0;z-index:40;background:#0b0c10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 16px)}
+.zoom img{max-width:100%;max-height:calc(100% - 110px);min-width:min(100%,320px);object-fit:contain;border-radius:14px;background:#fff;image-rendering:auto}
+.zoom-bar{display:flex;align-items:center;gap:12px;color:#fff;max-width:100%}
+.zoom-bar b{font-size:17px;overflow-wrap:anywhere}
+.zoom-bar .btn{color:var(--ink);background:var(--surface);flex:none}
+.zoom-hint{color:rgba(255,255,255,.6);font-size:13px}
 .rank{width:26px;text-align:center;font-family:var(--display);font-weight:800;color:var(--muted)}
 .icon-btn{border:0;background:none;padding:8px;border-radius:10px;color:var(--muted)}
 .icon-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
@@ -606,7 +613,7 @@ function viewCatalogo(){
     h+='<p class="valore-note" style="margin:10px 0 0">'+esc(filtroTipo==='__none'?'Senza tipologia':tipiMap.get(filtroTipo).l)+': <b class="num" style="color:var(--ok)">'+fmt(v)+'</b> · '+n+(n===1?' pezzo disponibile':' pezzi disponibili')+'</p>'}
   if(prods.length){h+='<div class="card list cat-list" style="margin-top:12px">';
     prods.forEach(p=>{const r=rimasti(p);const tot=live('vendite').filter(v=>v.prodottoId===p.id||(v.items||[]).includes(p.id)).length;
-      h+='<button class="li" style="border-left:0;border-right:0;border-top:0;background:none;text-align:left;width:100%" data-edit="'+esc(p.id)+'"><span class="thumb">'+fotoCentrata(p)+'</span><div class="grow">'+(p.tipo?'<span class="tipo">'+esc(p.tipo)+'</span>':'')+'<b>'+esc(p.nome)+'</b><small class="num">'+esc(SIZE_L[p.taglia]||'')+' · '+fmt(p.prezzo)+' · venduti '+tot+(r!=null?' · rimasti '+r:'')+'</small></div><span class="icon-btn" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>'});
+      h+='<button class="li" style="border-left:0;border-right:0;border-top:0;background:none;text-align:left;width:100%" data-edit="'+esc(p.id)+'"><span class="thumb'+(p.foto?' zoomabile':'')+'"'+(p.foto?' data-zoom="'+esc(p.id)+'" role="button" aria-label="Ingrandisci la foto di '+esc(p.nome)+'"':'')+'>'+fotoCentrata(p)+'</span><div class="grow">'+(p.tipo?'<span class="tipo">'+esc(p.tipo)+'</span>':'')+'<b>'+esc(p.nome)+'</b><small class="num">'+esc(SIZE_L[p.taglia]||'')+' · '+fmt(p.prezzo)+' · venduti '+tot+(r!=null?' · rimasti '+r:'')+'</small></div><span class="icon-btn" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>'});
     h+='</div>'}
   else if(qc||filtroTipo!=='tutte')h+='<div class="card empty" style="margin-top:12px">Nessuna creazione trovata'+(qc?' per “'+esc(cercaCat.trim())+'”':'')+'.</div>';
   else h+='<div class="card empty" style="margin-top:12px">Ancora nessuna creazione. Aggiungetele con una foto: al banco le riconoscete al volo.</div>';
@@ -643,6 +650,7 @@ function render(){
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;go(b.dataset.tab)});
 function go(t){tab=t;confirmDel=null;confirmRefill=null;try{localStorage.setItem(LS+'-tab',t)}catch(e){}render();window.scrollTo(0,0)}
 view.addEventListener('click',e=>{
+  const z=e.target.closest('[data-zoom]');if(z){openZoom(S.prodotti[z.dataset.zoom]);return}
   const t=e.target.closest('button');if(!t)return;
   if(t.dataset.quick){const k=t.dataset.quick;vendi({nome:'Pezzo '+SIZE_L[k],taglia:k,prezzo:listino()[k]});flash(t);return}
   if(t.dataset.sell){const p=S.prodotti[t.dataset.sell];if(!p)return;vendi({prodottoId:p.id,nome:p.nome,taglia:p.taglia,prezzo:p.prezzo});const n=view.querySelector('[data-sell="'+CSS.escape(p.id)+'"]');if(n)flash(n);return}
@@ -691,6 +699,14 @@ function flash(n){n.classList.remove('flash');void n.offsetWidth;n.classList.add
 const sheet=document.getElementById('sheet');
 function openSheet(html,bind){sheet.innerHTML='<div class="sheet-in" role="dialog" aria-modal="true">'+html+'</div>';sheet.hidden=false;bind(sheet.firstElementChild)}
 function closeSheet(){sheet.hidden=true;sheet.innerHTML=''}
+// Catalogo: foto ingrandita a tutto schermo. Tap ovunque per chiudere, "Modifica" per aprire la creazione.
+function openZoom(p){if(!p||!p.foto)return;
+  const z=document.createElement('div');z.className='zoom';z.setAttribute('role','dialog');z.setAttribute('aria-modal','true');
+  z.innerHTML='<img src="'+esc(p.foto)+'" alt="'+esc(p.nome)+'"><div class="zoom-bar"><b>'+esc(p.nome)+'</b><button class="btn sm" data-zedit="1">Modifica</button></div><span class="zoom-hint">Tocca per chiudere</span>';
+  const chiudi=()=>{z.remove();document.removeEventListener('keydown',esc_)};const esc_=e=>{if(e.key==='Escape')chiudi()};
+  z.onclick=e=>{if(e.target.closest('[data-zedit]')){chiudi();openProdotto(p);return}chiudi()};
+  document.addEventListener('keydown',esc_);document.body.appendChild(z);
+}
 sheet.addEventListener('click',e=>{if(e.target===sheet)closeSheet()});
 
 function openMercato(){
