@@ -138,8 +138,8 @@ h2{font-family:var(--display);font-weight:800;font-size:19px;margin:22px 0 10px;
 
 /* Schede in basso */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:7;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-.tabs-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);height:var(--tabs-h)}
-.tab{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;min-width:0;font-weight:700;color:var(--muted)}
+.tabs-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(7,1fr);height:var(--tabs-h)}
+.tab{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;min-width:0;letter-spacing:-.1px;font-weight:700;color:var(--muted)}
 .tab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .tab[aria-selected="true"]{color:var(--accent)}
 .tab{position:relative}
@@ -159,6 +159,16 @@ h2{font-family:var(--display);font-weight:800;font-size:19px;margin:22px 0 10px;
 .stato.ok{background:color-mix(in srgb,var(--ok,#2e7d32) 18%,var(--surface));color:var(--ink)}
 .seg.due{grid-template-columns:repeat(2,minmax(0,1fr))}
 .seg.due button{--c:var(--accent)}
+.seg.tre{grid-template-columns:repeat(3,minmax(0,1fr))}
+.seg.tre button{flex-direction:row;justify-content:center}
+.pri-alta{--c:var(--danger)} .pri-media{--c:var(--warn)} .pri-bassa{--c:var(--muted)}
+.seg.tre .dot,.mat-row .dot{width:10px;height:10px;border-radius:50%;background:var(--c);display:inline-block;flex:none}
+.mat-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.mat-row:last-child{border-bottom:0}
+.mat-row .ck-box[aria-checked="true"]{background:var(--ok);border-color:var(--ok)}
+.mat-row .mat-txt{flex:1;min-width:0;border:0;background:none;text-align:left;padding:0;display:flex;align-items:center;gap:8px;font-weight:700;overflow-wrap:anywhere;color:var(--ink)}
+.mat-row.fatto .mat-txt{text-decoration:line-through;color:var(--muted);font-weight:600}
+.mat-pri{flex:none;font-size:12px;font-weight:800;color:var(--muted)}
 .refill-open{flex:1;min-width:0;display:flex;align-items:center;gap:10px;border:0;background:none;padding:0;text-align:left;color:inherit}
 
 /* Incassi */
@@ -288,6 +298,7 @@ h2{font-family:var(--display);font-weight:800;font-size:19px;margin:22px 0 10px;
   <button class="tab" role="tab" data-tab="catalogo" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Catalogo</button>
   <button class="tab" role="tab" data-tab="spese" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Spese</button>
   <button class="tab" role="tab" data-tab="memo" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Memo</button>
+  <button class="tab" role="tab" data-tab="materiali" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z"/><rect x="5" y="6" width="14" height="15" rx="2"/><path d="M9 12l2 2 4-4M9 17h6"/></svg>Materiali</button>
 </div></nav>
 
 <script src="config.js"></script>
@@ -466,7 +477,7 @@ function renderCliente(){
 /* ---------- Viste ---------- */
 let cercaCat='',filtroTipo='tutte',confirmMerc=null,confirmRefill=null;
 let tab='vendi',filtro='tutte',cerca='',selMercato=null,confirmDel=null;
-try{const t=localStorage.getItem(LS+'-tab');if(['vendi','incassi','refill','catalogo','spese','memo'].includes(t))tab=t}catch(e){}
+try{const t=localStorage.getItem(LS+'-tab');if(['vendi','incassi','refill','catalogo','spese','memo','materiali'].includes(t))tab=t}catch(e){}
 const view=document.getElementById('view');
 
 function bead(taglia,s){return '<i class="bead c-'+esc(taglia||'medi')+'"'+(s?' style="--s:'+s+'px"':'')+'></i>'}
@@ -639,9 +650,11 @@ function render(){
   document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===tab)));
   [['refill',esaurite().length],['memo',memoList().filter(m=>memoStato(m)==='ora').length]].forEach(([k,n])=>{const t=document.querySelector('.tab[data-tab="'+k+'"]');let bd=t.querySelector('.badge');if(n){if(!bd){bd=document.createElement('span');bd.className='badge num';t.appendChild(bd)}bd.textContent=n}else if(bd)bd.remove()});
   const active=document.activeElement&&document.activeElement.id;
-  const caret=(active==='cerca'||active==='cercaCat')?document.activeElement.selectionStart:null;
-  view.innerHTML=tab==='vendi'?viewVendi():tab==='incassi'?viewIncassi():tab==='spese'?viewSpese():tab==='refill'?viewRefill():tab==='memo'?viewMemo():viewCatalogo();
-  if(active==='cerca'||active==='cercaCat'){const i=document.getElementById(active);if(i){i.focus();try{i.setSelectionRange(caret,caret)}catch(e){}}}
+  const caret=(active==='cerca'||active==='cercaCat'||active==='matTesto')?document.activeElement.selectionStart:null;
+  const matBozza=document.getElementById('matTesto');const matVal=matBozza?matBozza.value:'';
+  view.innerHTML=tab==='vendi'?viewVendi():tab==='incassi'?viewIncassi():tab==='spese'?viewSpese():tab==='refill'?viewRefill():tab==='memo'?viewMemo():tab==='materiali'?viewMateriali():viewCatalogo();
+  {const m=document.getElementById('matTesto');if(m&&matVal)m.value=matVal}
+  if(active==='cerca'||active==='cercaCat'||active==='matTesto'){const i=document.getElementById(active);if(i){i.focus();try{i.setSelectionRange(caret,caret)}catch(e){}}}
   renderCliente();updateSync();
   if(tab==='catalogo')centraFotoCatalogo();
 }
@@ -649,6 +662,7 @@ function render(){
 /* ---------- Eventi ---------- */
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;go(b.dataset.tab)});
 function go(t){tab=t;confirmDel=null;confirmRefill=null;try{localStorage.setItem(LS+'-tab',t)}catch(e){}render();window.scrollTo(0,0)}
+view.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='matTesto'){e.preventDefault();aggiungiMateriale()}});
 view.addEventListener('click',e=>{
   const z=e.target.closest('[data-zoom]');if(z){openZoom(S.prodotti[z.dataset.zoom]);return}
   const t=e.target.closest('button');if(!t)return;
@@ -672,6 +686,11 @@ view.addEventListener('click',e=>{
   if(t.dataset.editspesa){openSpesa(S.spese[t.dataset.editspesa]);return}
   if(t.id==='nuovaSpesa'){openSpesa(null);return}
   if(t.id==='nuovoMemo'){openMemo(null);return}
+  if(t.dataset.mpri){matPri=t.dataset.mpri;view.querySelectorAll('[data-mpri]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mpri===matPri)));return}
+  if(t.id==='matAdd'){aggiungiMateriale();return}
+  if(t.dataset.matck){const m=S.config[t.dataset.matck];if(m){put('config',{...m,fatto:!m.fatto});render()}return}
+  if(t.dataset.matedit){openMateriale(S.config[t.dataset.matedit]);return}
+  if(t.id==='matPulisci'){const fatti=matList().filter(m=>m.fatto);fatti.forEach(m=>put('config',{...m,del:true}));render();toast(fatti.length===1?'Tolto 1 materiale':'Tolti '+fatti.length+' materiali',()=>{fatti.forEach(m=>put('config',{...m,del:false}));render()});return}
   if(t.dataset.editmemo){openMemo(S.config[t.dataset.editmemo]);return}
   if(t.dataset.filtro){filtro=t.dataset.filtro;render();return}
   if(t.dataset.goto){go(t.dataset.goto);return}
@@ -883,6 +902,38 @@ function openMemo(orig){
       if(isNew&&!st.nome)setTimeout(()=>nm.focus(),50);
     });
   };
+  draw();
+}
+/* ---------- Materiali: lista della spesa per le creazioni ----------
+   Come i Memo, stanno nella collezione config (id "mat-…", tipo:'materiale'). */
+const PRI=[['alta','Alta'],['media','Media'],['bassa','Bassa']],PRI_ORD={alta:0,media:1,bassa:2},PRI_L=Object.fromEntries(PRI);
+let matPri='media';
+const matList=()=>live('config').filter(x=>x.tipo==='materiale');
+const priSeg=sel=>'<div class="seg tre" role="group" aria-label="Priorità">'+PRI.map(([k,l])=>'<button class="pri-'+k+'" data-mpri="'+k+'" aria-pressed="'+(sel===k)+'"><i class="dot"></i>'+l+'</button>').join('')+'</div>';
+function viewMateriali(){
+  const ms=matList(),daFare=ms.filter(m=>!m.fatto).sort((a,b)=>(PRI_ORD[a.priorita]??1)-(PRI_ORD[b.priorita]??1)||(a.creato||0)-(b.creato||0)),fatti=ms.filter(m=>m.fatto).sort((a,b)=>(b.u||0)-(a.u||0));
+  let h='<h2>Materiali</h2><p class="sub">Tutto quello che vi serve per le creazioni. Spuntate la casella quando l\'avete fatto o comprato.</p>';
+  h+='<div class="card" style="display:grid;gap:10px;margin-bottom:12px"><input class="input" id="matTesto" placeholder="Es. Perline nere, portachiavi, colla" autocomplete="off" enterkeyhint="done">'+priSeg(matPri)+'<button class="btn primary block" id="matAdd">+ Aggiungi</button></div>';
+  const riga=m=>{const k=PRI_L[m.priorita]?m.priorita:'media';return '<div class="mat-row pri-'+k+(m.fatto?' fatto':'')+'"><button class="ck-box" role="checkbox" aria-checked="'+!!m.fatto+'" aria-label="Fatto: '+esc(m.testo)+'" data-matck="'+esc(m.id)+'"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button class="mat-txt" data-matedit="'+esc(m.id)+'">'+esc(m.testo)+'</button><span class="mat-pri"><i class="dot"></i> '+PRI_L[k]+'</span></div>'};
+  if(!ms.length)return h+'<div class="card empty">Nessun materiale in lista. Scrivete qui sopra cosa vi serve, scegliete la priorità e premete Aggiungi.</div>';
+  h+=daFare.length?'<div class="card">'+daFare.map(riga).join('')+'</div>':'<div class="card empty">Avete tutto, niente da comprare o da fare.</div>';
+  if(fatti.length)h+='<div class="h2row"><h2>Fatti</h2><button class="btn ghost sm" id="matPulisci">Togli i fatti</button></div><div class="card">'+fatti.map(riga).join('')+'</div>';
+  return h;
+}
+function aggiungiMateriale(){const i=document.getElementById('matTesto');const t=(i&&i.value||'').trim();if(!t){if(i)i.focus();return}
+  i.value='';put('config',{id:'mat-'+uid(),tipo:'materiale',testo:t,priorita:matPri,fatto:false,creato:Date.now()});render();toast('Aggiunto: '+t);
+  const n=document.getElementById('matTesto');if(n)n.focus()}
+function openMateriale(orig){if(!orig)return;let st={...orig},askDel=false;
+  const draw=()=>{openSheet('<h3>Modifica materiale</h3><div class="field"><label for="maTesto">Cosa serve</label><input class="input" id="maTesto" value="'+esc(st.testo)+'" autocomplete="off"></div>'+
+    '<div class="field"><span class="flabel">Priorità</span>'+priSeg(st.priorita)+'</div>'+
+    '<div class="row-btns">'+(askDel?'<button class="btn danger" id="maDelOk">Elimina davvero</button>':'<button class="btn ghost" id="maDel" style="color:var(--danger)">Elimina</button>')+'<button class="btn" id="maChiudi">Annulla</button><button class="btn primary" id="maSalva">Salva</button></div>',
+  el=>{const tx=el.querySelector('#maTesto');const keep=()=>{st.testo=tx.value};
+    el.querySelectorAll('[data-mpri]').forEach(b=>b.onclick=()=>{keep();st.priorita=b.dataset.mpri;draw()});
+    el.querySelector('#maChiudi').onclick=closeSheet;
+    const d1=el.querySelector('#maDel');if(d1)d1.onclick=()=>{keep();askDel=true;draw()};
+    const d2=el.querySelector('#maDelOk');if(d2)d2.onclick=()=>{put('config',{...orig,del:true});closeSheet();render();toast('Materiale eliminato',()=>{put('config',{...orig,del:false});render()})};
+    el.querySelector('#maSalva').onclick=()=>{keep();const t=st.testo.trim();if(!t){tx.focus();return}put('config',{...st,testo:t});closeSheet();render();toast('Materiale salvato')};
+  })};
   draw();
 }
 function eliminaMercato(id){
