@@ -6,9 +6,27 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.token.email in ['EMAIL_EMA', 'EMAIL_COMPAGNA'];
     }
+    // Controlli su cosa si scrive (punto 8 del controllo sicurezza).
+    function numOrNull(d, k) {
+      return !(k in d) || d[k] == null || d[k] is number;
+    }
+    function datiValidi(documento) {
+      let d = request.resource.data;
+      return d.id == documento
+        && d.u is number
+        && d.u <= request.time.toMillis() + 86400000
+        && numOrNull(d, 'prezzo')
+        && numOrNull(d, 'importo')
+        && (!('foto' in d) || d.foto == null || (d.foto is string && d.foto.size() < 900000))
+        && (!('nome' in d) || d.nome == null || (d.nome is string && d.nome.size() < 500));
+    }
     match /{collezione}/{documento} {
-      allow read, write: if ammesso()
+      allow read: if ammesso()
         && collezione in ['config', 'mercati', 'prodotti', 'set', 'vendite', 'spese'];
+      // L'app non cancella mai davvero: segna "eliminato". Così nessuno può svuotare il database.
+      allow create, update: if ammesso()
+        && collezione in ['config', 'mercati', 'prodotti', 'set', 'vendite', 'spese']
+        && datiValidi(documento);
     }
   }
 }
